@@ -1,0 +1,33 @@
+stages:
+  - build
+  - deploy
+
+build:
+  image: node:18.13.0
+  stage: build
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run lint
+    - npm run test
+    - npm run build
+  artifacts:
+    paths:
+      - "build"
+
+deploy:
+  stage: deploy
+  only:
+    - dev
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+  variables:
+    AWS_DEFAULT_REGION: eu-west-2
+    AWS_BUCKET_NAME: tvg-poc
+  script:
+    - aws s3 sync build s3://$AWS_BUCKET_NAME
